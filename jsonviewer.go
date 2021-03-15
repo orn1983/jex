@@ -1,7 +1,5 @@
 package main
 
-// TODO FIX string quoting
-
 import (
 	"encoding/json"
 	"fmt"

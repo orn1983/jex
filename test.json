@@ -1,0 +1,59 @@
+[
+	{
+		"Uppercase": "field in JSON",
+		"lowercase": "with stuff",
+		"Tags": {
+			"more": "stuff",
+			"evenmore": "stuff"
+		},
+		"fields": {
+			"ints": 1,
+			"floats": 2.8,
+			"fake ints": "2",
+			"fake bools": "true",
+			"real bools": true,
+			"that can be true or false": false,
+			"or nulls": null
+		}
+	},
+	{
+		"Measurement": "#2",
+		"Time": "2021-03-13T13:37:00.001245",
+		"Tags": {
+			"nobody": "loves tags\" like i'do",
+			"jk": ":)"
+		},
+		"fields": {
+			"with_data": 1,
+			"and_more": 2.291,
+			"and_even_more": "hehe",
+			"grievences": [
+				"no soup for you",
+				"but plenty for my friend jerry",
+				"but none for elaine either",
+				{
+					"exceptions": null,
+					"caught": false
+				}
+			]
+		}
+	},
+	[
+		"hello",
+		"good",
+		"sir"
+	],
+	"kamelåså",
+	false,
+	true,
+	null,
+	8,
+	3.1337,
+	{
+		"don't be": "an asshole"
+	},
+	{
+		"or be": "an asshole",
+		"see if": "I care"
+	}
+]

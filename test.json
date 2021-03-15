@@ -44,6 +44,7 @@
 		"good",
 		"sir"
 	],
+	{ "named array": [1, 2, 3, 4, "5"] },
 	"kamelåså",
 	false,
 	true,

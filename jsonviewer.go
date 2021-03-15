@@ -8,120 +8,81 @@ import (
 	"github.com/gdamore/tcell"
 )
 
-type Slicer []interface{}
-func (s Slicer) String() string {
-	return fmt.Sprintf("[ %d ]", len(s))
-}
-
-type StringMapper map[string]interface{}
-func (m StringMapper) String() string {
-	return fmt.Sprintf("{ %d }", len(m))
-}
-
-type Truther bool
-func (t Truther) String() string {
-	return fmt.Sprintf("%t", t)
-}
-
-type Nuller bool
-func (n Nuller) String() string {
-	return "null"
-}
-
-type Stringer string
-func (s Stringer) String() string {
-	return fmt.Sprintf("%s", string(s))
-}
-
-func CreateStringer(i interface{}) fmt.Stringer {
+func GetColor(i interface{}) tcell.Color {
 	switch i.(type) {
 	case []interface{}:
-		return Slicer(i.([]interface{}))
+		return tcell.ColorGreen
 	case map[string]interface{}:
-		return StringMapper(i.(map[string]interface{}))
+		return tcell.ColorBlue
 	case bool:
-		return Truther(i.(bool))
-	case json.Number:
-		return i.(json.Number)
-	case string:
-		return Stringer(i.(string))
+		return tcell.ColorOlive
+	case string, json.Number:
+		return tcell.ColorWhite
 	case nil:
-		return Nuller(false)
+		return tcell.ColorPurple
+	default:
+		return tcell.ColorWhite
+	}
+}
+
+func AsString(i interface{}) string {
+	switch i.(type) {
+	case []interface{}:
+		return fmt.Sprintf("[ %d ]", len(i.([]interface{})))
+	case map[string]interface{}:
+		return fmt.Sprintf("{ %d }", len(i.(map[string]interface{})))
+	case bool:
+		return fmt.Sprintf("%t", i.(bool))
+	case json.Number:
+		return string(i.(json.Number))
+	case string:
+		return fmt.Sprintf("%q", i.(string))
+	case nil:
+		return "null"
 	default:
 		panic(fmt.Sprintf("unsupported data type %T in json!", i))
 	}
-	return nil
 }
 
 func CreateNodeRecursive(i interface{}) (*tview.TreeNode, error) {
-	var node *tview.TreeNode
 	var err error
+	nodename := AsString(i)
+	node := tview.NewTreeNode(nodename).SetColor(GetColor(i))
 	switch i.(type) {
+	// These cases cannot have children so let's just get them out of the way
+	case string, json.Number, bool, nil:
+		// Do nothing
 	case []interface{}:
-		s := CreateStringer(i)
-		node = tview.NewTreeNode(s.String()).SetColor(tcell.ColorGreen)
-		node.SetReference(s.String())
-		for _, child := range i.([]interface{}) {
-			nn, err := CreateNodeRecursive(child)
+		node.SetReference(nodename)
+		for _, entry := range i.([]interface{}) {
+			child, err := CreateNodeRecursive(entry)
 			if err != nil {
-				panic(err)
+				return node, err
 			}
-			node.AddChild(nn)
+			node.AddChild(child)
 		}
 	case map[string]interface{}:
-		s := CreateStringer(i)
-		node = tview.NewTreeNode(s.String()).SetColor(tcell.ColorBlue)
-		node.SetReference(s.String())
-		for childKey, childVal := range i.(map[string]interface{}) {
-			switch childVal.(type) {
-				case string:
-					cvs := CreateStringer(childVal)
-					description  := fmt.Sprintf("%s: \"%s\"", childKey, cvs.String())
-					childNode := tview.NewTreeNode(description)
+		node.SetReference(nodename)
+		var childNode *tview.TreeNode
+		for k, v := range i.(map[string]interface{}) {
+			switch v.(type) {
+				case string, json.Number, bool, nil:
+					// We really have two nodes, but the value cannot have children
+					// so we flatten the nodes into one
+					mergedNodeDescription  := fmt.Sprintf("%s: %s", k, AsString(v))
+					childNode = tview.NewTreeNode(mergedNodeDescription).SetColor(GetColor(v))
+				case []interface{}, map[string]interface{}:
+					var err error
+					childNode, err = CreateNodeRecursive(v)
 					if err != nil {
-						panic(err)
+						return node, err
 					}
-					node.AddChild(childNode)
-				case json.Number:
-					cvs := CreateStringer(childVal)
-					description  := fmt.Sprintf("%s: %s", childKey, cvs.String())
-					childNode := tview.NewTreeNode(description)
-					node.AddChild(childNode)
-				case bool:
-					cvs := CreateStringer(childVal)
-					description  := fmt.Sprintf("%s: %s", childKey, cvs.String())
-					childNode := tview.NewTreeNode(description).SetColor(tcell.ColorOlive)
-					node.AddChild(childNode)
-				case nil:
-					cvs := CreateStringer(childVal)
-					description  := fmt.Sprintf("%s: %s", childKey, cvs.String())
-					childNode := tview.NewTreeNode(description).SetColor(tcell.ColorPurple)
-					node.AddChild(childNode)
+					childNode.SetText(fmt.Sprintf("%s: %s", k, childNode.GetText()))
 				default:
-					childNode, err := CreateNodeRecursive(childVal)
-					if err != nil {
-						panic(err)
-					}
-					childNode.SetText(fmt.Sprintf("%s: %s", childKey, childNode.GetText()))
-					node.AddChild(childNode)
+					return node, fmt.Errorf("unsupported data type %T in json!", v)
 			}
+			node.AddChild(childNode)
 		}
-	case string:
-		node = tview.NewTreeNode(i.(string))
-		node.SetText(fmt.Sprintf("\"%s\"", i.(string)))
-		node.SetReference(i.(string))
-	case json.Number:
-		s := CreateStringer(i)
-		node = tview.NewTreeNode(s.String())
-		node.SetReference(s.String())
-	case bool:
-		s := CreateStringer(i)
-		node = tview.NewTreeNode(s.String()).SetColor(tcell.ColorOlive)
-		node.SetReference(s.String())
-	case nil:
-		s := CreateStringer(i)
-		node = tview.NewTreeNode(s.String()).SetColor(tcell.ColorPurple)
-		node.SetReference(s.String())
 	default:
 		err = fmt.Errorf("unsupported type %T for node creation", i)
 	}
@@ -157,6 +118,9 @@ func main() {
 		panic(err)
 	}
 	rootNode, err := CreateNodeRecursive(m)
+	if err != nil {
+		panic(err)
+	}
 	rootNode.SetExpanded(true)
 
 	tree := tview.NewTreeView().SetRoot(rootNode).SetCurrentNode(rootNode)

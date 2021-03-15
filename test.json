@@ -17,6 +17,7 @@
 		}
 	},
 	{
+		"   Field name with Spaces around it ": "  value with spaces ",
 		"Measurement": "#2",
 		"Time": "2021-03-13T13:37:00.001245",
 		"Tags": {

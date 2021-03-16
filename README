@@ -1,0 +1,5 @@
+Console JSON explorer written in Golang using tview
+
+Navigate a json using a tree structure to inspect data.
+
+TODO search, expand all / collapse all, expand all children / collapse all children

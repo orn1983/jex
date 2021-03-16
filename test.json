@@ -52,10 +52,10 @@
 	8,
 	3.1337,
 	{
-		"don't be": "an asshole"
+		"single kv": "entry"
 	},
 	{
-		"or be": "an asshole",
-		"see if": "I care"
+		"double": "kv",
+		"entry": "here"
 	}
 ]

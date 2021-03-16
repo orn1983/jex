@@ -125,7 +125,19 @@ func main() {
 
 	tree := tview.NewTreeView().SetRoot(rootNode).SetCurrentNode(rootNode)
 	tree.SetSelectedFunc(selected)
-	if err := tview.NewApplication().SetRoot(tree, true).EnableMouse(true).Run(); err != nil {
+	app := tview.NewApplication()
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case 'q':
+				app.Stop()
+				break
+			}
+		}
+		return event
+	})
+	app.SetRoot(tree, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }

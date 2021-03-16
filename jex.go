@@ -137,7 +137,7 @@ func main() {
 		}
 		return event
 	})
-	app.SetRoot(tree, true).EnableMouse(true).Run(); err != nil {
+	err := app.SetRoot(tree, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }

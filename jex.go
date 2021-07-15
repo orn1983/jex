@@ -123,21 +123,65 @@ func main() {
 	}
 	rootNode.SetExpanded(true)
 
-	tree := tview.NewTreeView().SetRoot(rootNode).SetCurrentNode(rootNode)
-	tree.SetSelectedFunc(selected)
 	app := tview.NewApplication()
+
+	tree := tview.NewTreeView().SetRoot(rootNode).SetCurrentNode(rootNode)
+	tree.SetSelectedFunc(selected).
+		SetBorder(true).
+		SetBorderAttributes(tcell.AttrBold).
+		SetBorderColor(tcell.ColorYellow).
+		SetTitle("[red:yellow]j[black:yellow]son[red:yellow] ex[black:yellow]plorer")
+
+	searchBox := tview.NewInputField().
+		SetLabel("Search (/) ").
+		SetFieldBackgroundColor(tcell.ColorDefault)
+
+	searchBox.SetDoneFunc(func(key tcell.Key) {
+			switch key {
+			case tcell.KeyEnter:
+				searchBox.SetFieldBackgroundColor(tcell.ColorDefault)
+				searchBox.SetFieldTextColor(tcell.ColorWhite)
+				app.SetFocus(tree)
+			case tcell.KeyEscape:
+				searchBox.SetText("").
+					SetFieldBackgroundColor(tcell.ColorDefault).
+					SetPlaceholder("")
+				app.SetFocus(tree)
+			default:
+				fmt.Printf("got key %s", key)
+			}
+		})
+
+	flex := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(tree, 0, 1, true).
+		AddItem(searchBox, 1, 0, false)
+
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'q':
 				app.Stop()
-				break
+			case '/':
+				if !searchBox.HasFocus() {
+					searchBox.SetPlaceholder("tag or value").
+						SetPlaceholderTextColor(tcell.ColorRed).
+						SetFieldBackgroundColor(tcell.ColorYellow).
+						SetFieldTextColor(tcell.ColorBlack)
+					app.SetFocus(searchBox)
+					return &tcell.EventKey{}
+				}
 			}
+		case tcell.KeyEsc:
+		  if searchBox.GetText() != "" {
+			 searchBox.SetText("").
+				SetPlaceholder("")
+		  }
 		}
 		return event
 	})
-	if err := app.SetRoot(tree, true).EnableMouse(true).Run(); err != nil {
+	if err := app.SetRoot(flex, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 }

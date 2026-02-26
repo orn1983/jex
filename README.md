@@ -71,7 +71,7 @@ Example UI (illustrative):
 │         └── "collapse"                                         │
 └────────────────────────────────────────────────────────────────┘
 Search (/) [1/2] tree
-Keys: / search  Enter toggle  n/p next/prev  e/c children  E/C all  q quit
+Keys: / search  Enter toggle  n/p next/prev  u/d page up/down  e/c children  E/C all  q quit
 ```
 
 Controls:
@@ -79,6 +79,7 @@ Controls:
 - `/`: Focus search field
 - `Enter` (in search): Find first match and show index (`n/m`)
 - `n` / `p`: Next/previous search match
+- `u` / `d`: Page up/down in the tree view
 - `e` / `c`: Expand/collapse children of selected node
 - `E` / `C`: Expand/collapse entire tree
 - `q`: Quit

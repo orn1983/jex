@@ -313,6 +313,14 @@ func collectMatches(root *tview.TreeNode, query string) []*tview.TreeNode {
 	return matches
 }
 
+func pageStep(tree *tview.TreeView) int {
+	_, _, _, height := tree.GetInnerRect()
+	if height <= 1 {
+		return 1
+	}
+	return height - 1
+}
+
 type searchState struct {
 	query   string
 	matches []*tview.TreeNode
@@ -385,6 +393,7 @@ func main() {
 		panic(err)
 	}
 	rootNode.SetExpanded(true)
+	fileName := filepath.Base(os.Args[1])
 
 	app := tview.NewApplication()
 	search := &searchState{}
@@ -394,7 +403,7 @@ func main() {
 		SetBorder(true).
 		SetBorderAttributes(tcell.AttrBold).
 		SetBorderColor(tcell.ColorYellow).
-		SetTitle(fmt.Sprintf("[red:yellow]j[black:yellow]e[red:yellow]x[black:yellow]plorer (%s)", docType))
+		SetTitle(fmt.Sprintf("[red:yellow]j[black:yellow]e[red:yellow]x[black:yellow]plorer (%s) - %s", docType, fileName))
 
 	searchBox := tview.NewInputField().
 		SetLabel("Search (/) ").
@@ -402,7 +411,7 @@ func main() {
 
 	helpBar := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText("Keys: [yellow]/[white] search  [yellow]Enter[white] toggle  [yellow]n/p[white] next/prev  [yellow]e/c[white] expand/collapse children  [yellow]E/C[white] expand/collapse all  [yellow]q[white] quit")
+		SetText("Keys: [yellow]/[white] search  [yellow]Enter[white] toggle  [yellow]n/p[white] next/prev  [yellow]u/d[white] page up/down  [yellow]e/c[white] expand/collapse children  [yellow]E/C[white] expand/collapse all  [yellow]q[white] quit")
 
 	searchBox.SetDoneFunc(func(key tcell.Key) {
 		switch key {
@@ -478,6 +487,12 @@ func main() {
 				return nil
 			case 'c':
 				setChildrenExpanded(tree.GetCurrentNode(), false)
+				return nil
+			case 'u':
+				tree.Move(-pageStep(tree))
+				return nil
+			case 'd':
+				tree.Move(pageStep(tree))
 				return nil
 			case 'E':
 				setExpandedRecursive(rootNode, true)

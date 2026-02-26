@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"golang.org/x/net/html/charset"
 	"io"
 	"os"
 	"path/filepath"
@@ -104,6 +105,7 @@ type xmlElement struct {
 
 func parseXML(data []byte) (*xmlElement, error) {
 	decoder := xml.NewDecoder(bytes.NewReader(data))
+	decoder.CharsetReader = charset.NewReaderLabel
 	var stack []*xmlElement
 	var root *xmlElement
 

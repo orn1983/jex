@@ -228,10 +228,6 @@ func buildRootNode(path string) (*tview.TreeNode, string, error) {
 }
 
 func selected(node *tview.TreeNode) {
-	reference := node.GetReference()
-	if reference == nil {
-		return
-	}
 	children := node.GetChildren()
 	if len(children) == 0 {
 		return
@@ -264,7 +260,13 @@ func setChildrenExpanded(node *tview.TreeNode, expanded bool) {
 	if node == nil {
 		return
 	}
-	for _, child := range node.GetChildren() {
+	children := node.GetChildren()
+	if len(children) == 0 {
+		return
+	}
+	// Keep the selected node visible so child expand/collapse has a visible effect.
+	node.SetExpanded(true)
+	for _, child := range children {
 		setExpandedRecursive(child, expanded)
 	}
 }

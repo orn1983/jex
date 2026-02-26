@@ -35,7 +35,7 @@ Example UI (illustrative):
 │     └── tree: [ 2 ]                                            │
 │         ├── "expand"                                           │
 │         └── "collapse"                                         │
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────┘
 Search (/) [1/2] tree
 Keys: / search  Enter toggle  n/p next/prev  e/c children  E/C all  q quit
 ```

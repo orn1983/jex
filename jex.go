@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -89,6 +93,136 @@ func CreateNodeRecursive(i interface{}) (*tview.TreeNode, error) {
 	}
 	node.SetExpanded(false)
 	return node, err
+}
+
+type xmlElement struct {
+	Name     string
+	Attrs    []xml.Attr
+	Text     string
+	Children []*xmlElement
+}
+
+func parseXML(data []byte) (*xmlElement, error) {
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	var stack []*xmlElement
+	var root *xmlElement
+
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			current := &xmlElement{
+				Name:  t.Name.Local,
+				Attrs: t.Attr,
+			}
+			if len(stack) == 0 {
+				root = current
+			} else {
+				parent := stack[len(stack)-1]
+				parent.Children = append(parent.Children, current)
+			}
+			stack = append(stack, current)
+		case xml.EndElement:
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		case xml.CharData:
+			text := strings.TrimSpace(string(t))
+			if text == "" || len(stack) == 0 {
+				continue
+			}
+			current := stack[len(stack)-1]
+			if current.Text == "" {
+				current.Text = text
+			} else {
+				current.Text += " " + text
+			}
+		}
+	}
+
+	if root == nil {
+		return nil, fmt.Errorf("no XML root element found")
+	}
+	return root, nil
+}
+
+func createXMLNodeRecursive(element *xmlElement) *tview.TreeNode {
+	label := fmt.Sprintf("<%s>", element.Name)
+	node := tview.NewTreeNode(label).SetColor(tcell.ColorTeal)
+
+	if len(element.Attrs) > 0 || element.Text != "" || len(element.Children) > 0 {
+		node.SetReference(element.Name)
+	}
+
+	for _, attr := range element.Attrs {
+		attrText := fmt.Sprintf("@%s: %q", attr.Name.Local, attr.Value)
+		node.AddChild(tview.NewTreeNode(attrText).SetColor(tcell.ColorWhite))
+	}
+
+	if element.Text != "" {
+		textNode := tview.NewTreeNode(fmt.Sprintf("#text: %q", element.Text)).SetColor(tcell.ColorWhite)
+		node.AddChild(textNode)
+	}
+
+	for _, child := range element.Children {
+		node.AddChild(createXMLNodeRecursive(child))
+	}
+
+	node.SetExpanded(false)
+	return node
+}
+
+func parseJSON(data []byte) (interface{}, error) {
+	var m interface{}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func buildRootNode(path string) (*tview.TreeNode, string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", err
+	}
+
+	ext := strings.ToLower(filepath.Ext(path))
+	trimmed := strings.TrimSpace(string(content))
+
+	tryXMLFirst := ext == ".xml" || (ext != ".json" && strings.HasPrefix(trimmed, "<"))
+	if tryXMLFirst {
+		element, err := parseXML(content)
+		if err != nil {
+			return nil, "", err
+		}
+		return createXMLNodeRecursive(element), "XML", nil
+	}
+
+	m, err := parseJSON(content)
+	if err != nil {
+		// Fallback for unknown extension files that contain XML.
+		if ext != ".json" && strings.HasPrefix(trimmed, "<") {
+			element, xmlErr := parseXML(content)
+			if xmlErr == nil {
+				return createXMLNodeRecursive(element), "XML", nil
+			}
+		}
+		return nil, "", err
+	}
+	rootNode, err := CreateNodeRecursive(m)
+	if err != nil {
+		return nil, "", err
+	}
+	return rootNode, "JSON", nil
 }
 
 func selected(node *tview.TreeNode) {
@@ -240,24 +374,11 @@ func (s *searchState) prev() *tview.TreeNode {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s <json-file>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s <json-or-xml-file>\n", os.Args[0])
 		os.Exit(1)
 	}
 
-	jsonFile, err := os.Open(os.Args[1])
-	if err != nil {
-		panic(err)
-	}
-	defer jsonFile.Close()
-
-	var m interface{}
-	decoder := json.NewDecoder(jsonFile)
-	decoder.UseNumber()
-	err = decoder.Decode(&m)
-	if err != nil {
-		panic(err)
-	}
-	rootNode, err := CreateNodeRecursive(m)
+	rootNode, docType, err := buildRootNode(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
@@ -271,7 +392,7 @@ func main() {
 		SetBorder(true).
 		SetBorderAttributes(tcell.AttrBold).
 		SetBorderColor(tcell.ColorYellow).
-		SetTitle("[red:yellow]j[black:yellow]son[red:yellow] ex[black:yellow]plorer")
+		SetTitle(fmt.Sprintf("[red:yellow]j[black:yellow]e[red:yellow]x[black:yellow]plorer (%s)", docType))
 
 	searchBox := tview.NewInputField().
 		SetLabel("Search (/) ").

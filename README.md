@@ -17,6 +17,23 @@ XML also works:
 make run JSON=path/to/file.xml
 ```
 
+Portable build (cross-compile):
+```bash
+make portable GOOS=linux GOARCH=amd64
+```
+
+Select architecture by setting `GOARCH` (and optionally `GOOS`):
+- `amd64`: x86_64 CPUs (Intel/AMD 64-bit)
+- `arm64`: Apple Silicon / ARM 64-bit
+- `386`: 32-bit x86
+- `arm`: 32-bit ARM
+
+More examples:
+```bash
+make portable GOOS=darwin GOARCH=arm64
+make portable GOOS=windows GOARCH=amd64
+```
+
 Example JSON (`test.json`):
 ```json
 {

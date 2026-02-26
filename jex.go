@@ -324,9 +324,11 @@ func pageStep(tree *tview.TreeView) int {
 }
 
 type searchState struct {
-	query   string
-	matches []*tview.TreeNode
-	index   int
+	query            string
+	matches          []*tview.TreeNode
+	index            int
+	highlighted      *tview.TreeNode
+	highlightedStyle tcell.Style
 }
 
 func (s *searchState) position() (int, int) {
@@ -350,9 +352,11 @@ func (s *searchState) refresh(root *tview.TreeNode, query string) {
 	s.query = query
 	s.matches = collectMatches(root, query)
 	s.index = 0
+	s.setActiveMatch(s.current())
 }
 
 func (s *searchState) clear() {
+	s.setActiveMatch(nil)
 	s.query = ""
 	s.matches = nil
 	s.index = 0
@@ -367,21 +371,43 @@ func (s *searchState) current() *tview.TreeNode {
 
 func (s *searchState) next() *tview.TreeNode {
 	if len(s.matches) == 0 {
+		s.setActiveMatch(nil)
 		return nil
 	}
 	s.index = (s.index + 1) % len(s.matches)
-	return s.matches[s.index]
+	match := s.matches[s.index]
+	s.setActiveMatch(match)
+	return match
 }
 
 func (s *searchState) prev() *tview.TreeNode {
 	if len(s.matches) == 0 {
+		s.setActiveMatch(nil)
 		return nil
 	}
 	s.index--
 	if s.index < 0 {
 		s.index = len(s.matches) - 1
 	}
-	return s.matches[s.index]
+	match := s.matches[s.index]
+	s.setActiveMatch(match)
+	return match
+}
+
+func (s *searchState) setActiveMatch(node *tview.TreeNode) {
+	if s.highlighted != nil {
+		s.highlighted.SetTextStyle(s.highlightedStyle)
+		s.highlighted = nil
+	}
+	if node == nil {
+		return
+	}
+
+	s.highlighted = node
+	s.highlightedStyle = node.GetTextStyle()
+	// Muted blue-gray background to keep the active search match visible even
+	// when the cursor moves elsewhere.
+	s.highlighted.SetTextStyle(s.highlightedStyle.Background(tcell.NewRGBColor(32, 45, 58)))
 }
 
 func main() {

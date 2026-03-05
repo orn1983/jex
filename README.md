@@ -1,6 +1,6 @@
-Console JSON/XML TUI explorer written in Golang using tview
+Console JSON/XML/YAML TUI explorer written in Golang using tview
 
-Navigate JSON or XML using a terminal user interface (TUI) tree to inspect data.
+Navigate JSON, XML, or YAML using a terminal user interface (TUI) tree to inspect data.
 
 Usage:
 ```bash
@@ -15,6 +15,11 @@ make run JSON=path/to/file.json
 XML also works:
 ```bash
 make run JSON=path/to/file.xml
+```
+
+YAML works too:
+```bash
+make run JSON=path/to/file.yaml
 ```
 
 Portable build (cross-compile):

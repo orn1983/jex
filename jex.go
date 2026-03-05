@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"golang.org/x/net/html/charset"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
@@ -191,6 +192,45 @@ func parseJSON(data []byte) (interface{}, error) {
 	return m, nil
 }
 
+func normalizeYAML(v interface{}) interface{} {
+	switch typed := v.(type) {
+	case map[string]interface{}:
+		normalized := make(map[string]interface{}, len(typed))
+		for key, value := range typed {
+			normalized[key] = normalizeYAML(value)
+		}
+		return normalized
+	case map[interface{}]interface{}:
+		normalized := make(map[string]interface{}, len(typed))
+		for key, value := range typed {
+			normalized[fmt.Sprint(key)] = normalizeYAML(value)
+		}
+		return normalized
+	case []interface{}:
+		normalized := make([]interface{}, len(typed))
+		for i, value := range typed {
+			normalized[i] = normalizeYAML(value)
+		}
+		return normalized
+	default:
+		return typed
+	}
+}
+
+func parseYAML(data []byte) (interface{}, error) {
+	var raw interface{}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	normalized := normalizeYAML(raw)
+	jsonData, err := json.Marshal(normalized)
+	if err != nil {
+		return nil, err
+	}
+	return parseJSON(jsonData)
+}
+
 func buildRootNode(path string) (*tview.TreeNode, string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -200,8 +240,7 @@ func buildRootNode(path string) (*tview.TreeNode, string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	trimmed := strings.TrimSpace(string(content))
 
-	tryXMLFirst := ext == ".xml" || (ext != ".json" && strings.HasPrefix(trimmed, "<"))
-	if tryXMLFirst {
+	if ext == ".xml" {
 		element, err := parseXML(content)
 		if err != nil {
 			return nil, "", err
@@ -209,13 +248,34 @@ func buildRootNode(path string) (*tview.TreeNode, string, error) {
 		return createXMLNodeRecursive(element), "XML", nil
 	}
 
+	if ext == ".yaml" || ext == ".yml" {
+		m, err := parseYAML(content)
+		if err != nil {
+			return nil, "", err
+		}
+		rootNode, err := CreateNodeRecursive(m)
+		if err != nil {
+			return nil, "", err
+		}
+		return rootNode, "YAML", nil
+	}
+
 	m, err := parseJSON(content)
 	if err != nil {
-		// Fallback for unknown extension files that contain XML.
-		if ext != ".json" && strings.HasPrefix(trimmed, "<") {
-			element, xmlErr := parseXML(content)
-			if xmlErr == nil {
-				return createXMLNodeRecursive(element), "XML", nil
+		if ext != ".json" {
+			if strings.HasPrefix(trimmed, "<") {
+				element, xmlErr := parseXML(content)
+				if xmlErr == nil {
+					return createXMLNodeRecursive(element), "XML", nil
+				}
+			}
+
+			yamlData, yamlErr := parseYAML(content)
+			if yamlErr == nil {
+				rootNode, nodeErr := CreateNodeRecursive(yamlData)
+				if nodeErr == nil {
+					return rootNode, "YAML", nil
+				}
 			}
 		}
 		return nil, "", err
@@ -412,7 +472,7 @@ func (s *searchState) setActiveMatch(node *tview.TreeNode) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s <json-or-xml-file>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage: %s <json-xml-or-yaml-file>\n", os.Args[0])
 		os.Exit(1)
 	}
 

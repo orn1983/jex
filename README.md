@@ -1,6 +1,7 @@
 Console JSON/XML/YAML TUI explorer written in Golang using tview
 
 Navigate JSON, XML, or YAML using a terminal user interface (TUI) tree to inspect data.
+JSON and YAML can also be edited in-place (value edits, add/delete nodes, save).
 
 Usage:
 ```bash
@@ -76,7 +77,7 @@ Example UI (illustrative):
 │         └── "collapse"                                         │
 └────────────────────────────────────────────────────────────────┘
 Search (/) [1/2] tree
-Keys: / search  Enter toggle  n/p next/prev  u/d page up/down  e/c children  E/C all  q quit
+Keys: / search  Enter toggle  n/p next/prev  e edit  a add  D delete  s save  u/d page up/down  x/c children  X/C all  q quit
 ```
 
 Controls:
@@ -84,7 +85,17 @@ Controls:
 - `/`: Focus search field
 - `Enter` (in search): Find first match and show index (`n/m`)
 - `n` / `p`: Next/previous search match
+- `e`: Edit selected scalar value (JSON/YAML)
+- `a`: Add child node to selected object/array (JSON/YAML)
+- `D`: Delete selected node (JSON/YAML)
+- `s`: Save document (JSON/YAML)
 - `u` / `d`: Page up/down in the tree view
-- `e` / `c`: Expand/collapse children of selected node
-- `E` / `C`: Expand/collapse entire tree
-- `q`: Quit
+- `x` / `c`: Expand/collapse children of selected node
+- `X` / `C`: Expand/collapse entire tree
+- `q`: Quit. If the document has unsaved changes, a prompt offers `Save`, `Discard`, or `Cancel`.
+
+Notes:
+- XML documents are currently read-only.
+- When adding a node, a dialog lets you pick the new type (`object`, `array`, `string`, `number`, `bool`, `null`).
+- JSON/YAML saves preserve existing key order as much as possible.
+- Quitting with unsaved JSON/YAML edits asks whether to save before exiting.
